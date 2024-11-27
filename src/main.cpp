@@ -26,8 +26,6 @@
 #include <MetalKit/MetalKit.hpp>
 
 
-#pragma region Declarations {
-
 // Renderer class
 class Renderer
 {
@@ -41,6 +39,45 @@ class Renderer
         MTL::CommandQueue* _pCommandQueue;
 };
 
+Renderer::Renderer( MTL::Device* pDevice )
+: _pDevice( pDevice->retain() )
+{
+    _pCommandQueue = _pDevice->newCommandQueue();
+}
+
+Renderer::~Renderer()
+{
+    _pCommandQueue->release();
+    _pDevice->release();
+}
+
+// Frame
+void Renderer::draw( MTK::View* pView )
+{
+    // Metal relies on temporary autoreleased objectes, the sample creates a NS::AutoreleasePool object
+    // at the beginning to manage these objects. This pool tracks these temporary objects and frees 
+    // them when the pool descturctors is called at the end of the frame.
+    NS::AutoreleasePool* pPool = NS::AutoreleasePool::alloc()->init();
+    // Create a command buffer object. Allows the app to encode commands for execution by the GPU
+    MTL::CommandBuffer* pCmd = _pCommandQueue->commandBuffer();
+
+    MTL::RenderPassDescriptor* pRpd = pView->currentRenderPassDescriptor();
+
+    // Creates a Renderer command encoder object. Prepares the command buffer to receive drwaing commands
+    // and specifies the the actions to perform when drwaing starts and ends. The MTL RendererCommandEncoder
+    // does not explicitly encode any commands. However, the MTL::RenderPassDescriptor object uset to 
+    // create the encoder implicitly encodes a clear command. The command prodcues the solid red color
+    // on the view. 
+    MTL::RenderCommandEncoder* pEnc = pCmd->renderCommandEncoder( pRpd );
+    pEnc->endEncoding();
+    // Presents the current drawable. Encodes a command to make the results of the GPU's work vistible
+    // on the screen
+    pCmd->presentDrawable( pView->currentDrawable() );
+    pCmd->commit();
+
+
+    pPool->release();
+}
 
 // MyMTKViewDelegate using dependency injection 
 class MyMTKViewDelegate : public MTK::ViewDelegate
@@ -54,7 +91,26 @@ class MyMTKViewDelegate : public MTK::ViewDelegate
         Renderer* _pRenderer;
 };
 
-// MyAppDeletage using dependency injection 
+MyMTKViewDelegate::MyMTKViewDelegate( MTL::Device* pDevice )
+: MTK::ViewDelegate()
+, _pRenderer( new Renderer( pDevice ) )
+{
+}
+
+MyMTKViewDelegate::~MyMTKViewDelegate()
+{
+    delete _pRenderer;
+}
+
+// Cassl the Renderer class's draw() method. The draw() method performs
+// the minimal work necessary to clear the view's color
+void MyMTKViewDelegate::drawInMTKView( MTK::View* pView )
+{
+    _pRenderer->draw( pView );
+}
+
+// MyAppDeletage using dependency injection, notice this is 
+// a child class from interface NS::ApplicationDelegate
 class MyAppDelegate : public NS::ApplicationDelegate
 {
     public:
@@ -72,34 +128,6 @@ class MyAppDelegate : public NS::ApplicationDelegate
         MTL::Device* _pDevice; // Software representation of the system's GPU
         MyMTKViewDelegate* _pViewDelegate = nullptr;
 };
-
-#pragma endregion Declarations }
-
-
-int main( int argc, char* argv[] )
-{
-    NS::AutoreleasePool* pAutoreleasePool = NS::AutoreleasePool::alloc()->init();
-
-    MyAppDelegate del;
-
-    // Create the gloabl shared app object 
-    NS::Application* pSharedApplication = NS::Application::sharedApplication();
-
-    // Initialiaze a custom delegate, it receives notifications of system events, 
-    // in particular responds when the app has finished launching and is ready to create its window
-    // it has important member variables from metal.
-    pSharedApplication->setDelegate( &del );
-
-    pSharedApplication->run();
-
-    pAutoreleasePool->release();
-
-    return 0;
-}
-
-
-#pragma mark - AppDelegate
-#pragma region AppDelegate {
 
 MyAppDelegate::~MyAppDelegate()
 {
@@ -184,7 +212,7 @@ void MyAppDelegate::applicationDidFinishLaunching( NS::Notification* pNotificati
     // Sets the MTK::MyViewDelegate object, which is a subclass of MTK::ViewDelegate, this class
     // provides an interface to which the MTK::View can forward events, by overwritting virtual
     // functions of its parents class, MyMTKViewDelegate can respond to these events. MTK::View (parent class)
-    // calls the drawInMTKView() method each fram allowin the app to update any rendering,
+    // calls the drawInMTKView() method each fram allowing the app to update any rendering,
     // this object is the one that calls the drawInMTKView 
     _pViewDelegate = new MyMTKViewDelegate( _pDevice );
     _pMtkView->setDelegate( _pViewDelegate );
@@ -203,60 +231,28 @@ bool MyAppDelegate::applicationShouldTerminateAfterLastWindowClosed( NS::Applica
     return true;
 }
 
-#pragma endregion AppDelegate }
-
-
-#pragma mark - ViewDelegate
-#pragma region ViewDelegate {
-
-MyMTKViewDelegate::MyMTKViewDelegate( MTL::Device* pDevice )
-: MTK::ViewDelegate()
-, _pRenderer( new Renderer( pDevice ) )
+int main( int argc, char* argv[] )
 {
+    NS::AutoreleasePool* pAutoreleasePool = NS::AutoreleasePool::alloc()->init();
+
+    MyAppDelegate del;
+
+    // Create the gloabl shared app object 
+    NS::Application* pSharedApplication = NS::Application::sharedApplication();
+
+    // Initialiaze a custom delegate, it receives notifications of system events, 
+    // in particular responds when the app has finished launching and is ready to create its window
+    // it has important member variables from metal.
+    pSharedApplication->setDelegate( &del );
+
+    // This run calls these method, when calling run
+    // - applicationWillFinishLaunching
+    // - applicationDidFinishLaunching
+    // - applicationShouldTerminateAfterLastWindowClosed
+
+    pSharedApplication->run();
+
+    pAutoreleasePool->release();
+
+    return 0;
 }
-
-MyMTKViewDelegate::~MyMTKViewDelegate()
-{
-    delete _pRenderer;
-}
-
-// Cassl the Renderer class's draw() method. The draw() method performs
-// the minimal work necessary to clear the view's color
-void MyMTKViewDelegate::drawInMTKView( MTK::View* pView )
-{
-    _pRenderer->draw( pView );
-}
-
-#pragma endregion ViewDelegate }
-
-
-#pragma mark - Renderer
-#pragma region Renderer {
-
-Renderer::Renderer( MTL::Device* pDevice )
-: _pDevice( pDevice->retain() )
-{
-    _pCommandQueue = _pDevice->newCommandQueue();
-}
-
-Renderer::~Renderer()
-{
-    _pCommandQueue->release();
-    _pDevice->release();
-}
-
-void Renderer::draw( MTK::View* pView )
-{
-    NS::AutoreleasePool* pPool = NS::AutoreleasePool::alloc()->init();
-
-    MTL::CommandBuffer* pCmd = _pCommandQueue->commandBuffer();
-    MTL::RenderPassDescriptor* pRpd = pView->currentRenderPassDescriptor();
-    MTL::RenderCommandEncoder* pEnc = pCmd->renderCommandEncoder( pRpd );
-    pEnc->endEncoding();
-    pCmd->presentDrawable( pView->currentDrawable() );
-    pCmd->commit();
-
-    pPool->release();
-}
-
-#pragma endregion Renderer }

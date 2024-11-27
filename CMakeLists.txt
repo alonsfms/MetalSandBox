@@ -6,8 +6,10 @@ set(CMAKE_CXX_STANDARD 17)
 # include inc
 add_subdirectory(metal-cmake) 
 
+# include_directories(inc)
+
 # add executables manually
-add_executable(MetalBaseLine WIN32 src/main.cpp)
+add_executable(MetalBaseLine WIN32  src/main.cpp)
 
 # link against glfw and OpenGL::GL
 target_link_libraries(MetalBaseLine METAL_CPP)
