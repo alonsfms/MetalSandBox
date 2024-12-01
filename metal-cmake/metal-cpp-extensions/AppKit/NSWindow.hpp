@@ -43,7 +43,7 @@ namespace NS
 			void				setContentView( const View* pContentView );
 			void				makeKeyAndOrderFront( const Object* pSender );
 			void				setTitle( const String* pTitle );
-
+			void				setSubTitle( const String* pSubTitle );
 			void				close();
 	};
 
@@ -72,7 +72,12 @@ _NS_INLINE void NS::Window::makeKeyAndOrderFront( const Object* pSender )
 
 _NS_INLINE void NS::Window::setTitle( const String* pTitle )
 {
-	Object::sendMessage< void >( this, _APPKIT_PRIVATE_SEL( setTitle_), pTitle );
+	Object::sendMessage< void >( this, _APPKIT_PRIVATE_SEL( setTitle_ ), pTitle );
+}
+
+_NS_INLINE void NS::Window::setSubTitle( const String* pSubTitle )
+{
+	Object::sendMessage< void >( this, _APPKIT_PRIVATE_SEL( setSubtitle_ ), pSubTitle );
 }
 
 _NS_INLINE void NS::Window::close()

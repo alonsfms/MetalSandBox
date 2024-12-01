@@ -97,6 +97,9 @@ void MyAppDelegate::applicationDidFinishLaunching(NS::Notification *pNotificatio
     _pWindow->setContentView(_pMtkView);
     _pWindow->setTitle(NS::String::string("My First Metal Window", NS::StringEncoding::UTF8StringEncoding));
 
+    // Adding a new method not found
+    _pWindow->setSubTitle(NS::String::string("PUTA MADRE", NS::StringEncoding::UTF8StringEncoding));
+
     _pWindow->makeKeyAndOrderFront(nullptr);
 
     NS::Application *pApp = reinterpret_cast<NS::Application *>(pNotification->object());

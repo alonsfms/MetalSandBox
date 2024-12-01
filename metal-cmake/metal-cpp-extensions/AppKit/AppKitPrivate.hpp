@@ -150,6 +150,9 @@ _APPKIT_PRIVATE_DEF_SEL( setSubmenu_,
 _APPKIT_PRIVATE_DEF_SEL( setTitle_,
 						"setTitle:" );
 
+_APPKIT_PRIVATE_DEF_SEL( setSubtitle_,
+						"setSubtitle:" );
+
 _APPKIT_PRIVATE_DEF_SEL( windows,
 						"windows" );
 
